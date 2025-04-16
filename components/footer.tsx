@@ -90,7 +90,7 @@ export default function Footer() {
 
         <div className='border-t border-slate-200 pt-6 flex flex-col md:flex-row justify-between items-center'>
           <p className='text-sm text-slate-500 mb-4 md:mb-0'>
-            &copy; {year} LDR Counter. All rights reserved.
+            &copy; {year} LDR Counter. All rights reserved. Created 04/16/2025
           </p>
           <div className='flex space-x-6'>
             <a
