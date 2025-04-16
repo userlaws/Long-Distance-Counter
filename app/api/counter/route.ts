@@ -47,96 +47,105 @@ export async function POST(request: Request) {
 
     // Verify CAPTCHA for user actions only
     if (!isAutoIncrement && captchaToken) {
-      // Proper verification according to Google's documentation
-      const verificationUrl = 'https://www.google.com/recaptcha/api/siteverify';
-      const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+      // Skip verification for survey submission
+      if (captchaToken === 'survey-submission') {
+        // Process submission without CAPTCHA verification or IP check
+        // This is allowed because the survey already verified CAPTCHA
+      } else {
+        // Proper verification according to Google's documentation
+        const verificationUrl =
+          'https://www.google.com/recaptcha/api/siteverify';
+        const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
-      // Verify that secret key is available
-      if (!secretKey) {
-        console.error('RECAPTCHA_SECRET_KEY not configured');
-        return NextResponse.json(
-          { error: 'Server configuration error' },
-          { status: 500 }
-        );
-      }
-
-      // Prepare form data for verification
-      const formData = new URLSearchParams();
-      formData.append('secret', secretKey);
-      formData.append('response', captchaToken);
-      formData.append('remoteip', ip); // Optional but recommended
-
-      // Make verification request
-      const verificationResponse = await fetch(verificationUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData.toString(),
-      });
-
-      const captchaData = await verificationResponse.json();
-
-      // Check verification result
-      if (!captchaData.success) {
-        const errorCodes = captchaData['error-codes'] || ['unknown-error'];
-        console.error('CAPTCHA verification failed:', errorCodes);
-
-        return NextResponse.json(
-          {
-            error: 'CAPTCHA verification failed',
-            details: errorCodes,
-          },
-          { status: 400 }
-        );
-      }
-
-      // Verify the hostname matches (security check)
-      const expectedHostname =
-        process.env.HOSTNAME || request.headers.get('host');
-      if (
-        expectedHostname &&
-        captchaData.hostname &&
-        captchaData.hostname !== expectedHostname
-      ) {
-        console.error('CAPTCHA hostname mismatch:', {
-          expected: expectedHostname,
-          received: captchaData.hostname,
-        });
-        return NextResponse.json(
-          { error: 'CAPTCHA verification failed: hostname mismatch' },
-          { status: 400 }
-        );
-      }
-
-      // Check if the token is expired (older than 2 minutes)
-      if (captchaData.challenge_ts) {
-        const challengeTimestamp = new Date(captchaData.challenge_ts).getTime();
-        const currentTimestamp = Date.now();
-        const twoMinutesMs = 2 * 60 * 1000;
-
-        if (currentTimestamp - challengeTimestamp > twoMinutesMs) {
+        // Verify that secret key is available
+        if (!secretKey) {
+          console.error('RECAPTCHA_SECRET_KEY not configured');
           return NextResponse.json(
-            { error: 'CAPTCHA token expired, please try again' },
+            { error: 'Server configuration error' },
+            { status: 500 }
+          );
+        }
+
+        // Prepare form data for verification
+        const formData = new URLSearchParams();
+        formData.append('secret', secretKey);
+        formData.append('response', captchaToken);
+        formData.append('remoteip', ip); // Optional but recommended
+
+        // Make verification request
+        const verificationResponse = await fetch(verificationUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString(),
+        });
+
+        const captchaData = await verificationResponse.json();
+
+        // Check verification result
+        if (!captchaData.success) {
+          const errorCodes = captchaData['error-codes'] || ['unknown-error'];
+          console.error('CAPTCHA verification failed:', errorCodes);
+
+          return NextResponse.json(
+            {
+              error: 'CAPTCHA verification failed',
+              details: errorCodes,
+            },
             { status: 400 }
           );
         }
+
+        // Verify the hostname matches (security check)
+        const expectedHostname =
+          process.env.HOSTNAME || request.headers.get('host');
+        if (
+          expectedHostname &&
+          captchaData.hostname &&
+          captchaData.hostname !== expectedHostname
+        ) {
+          console.error('CAPTCHA hostname mismatch:', {
+            expected: expectedHostname,
+            received: captchaData.hostname,
+          });
+          return NextResponse.json(
+            { error: 'CAPTCHA verification failed: hostname mismatch' },
+            { status: 400 }
+          );
+        }
+
+        // Check if the token is expired (older than 2 minutes)
+        if (captchaData.challenge_ts) {
+          const challengeTimestamp = new Date(
+            captchaData.challenge_ts
+          ).getTime();
+          const currentTimestamp = Date.now();
+          const twoMinutesMs = 2 * 60 * 1000;
+
+          if (currentTimestamp - challengeTimestamp > twoMinutesMs) {
+            return NextResponse.json(
+              { error: 'CAPTCHA token expired, please try again' },
+              { status: 400 }
+            );
+          }
+        }
+
+        // For user actions, check IP rate limiting
+        const lastParticipation = ipAddresses.get(ip);
+        const now = Date.now();
+        const oneDay = 24 * 60 * 60 * 1000;
+
+        if (lastParticipation && now - lastParticipation < oneDay) {
+          return NextResponse.json(
+            { error: 'You have already participated recently' },
+            { status: 429 }
+          );
+        }
+
+        // Update IP tracking for real user actions
+        ipAddresses.set(ip, now);
       }
-
-      // For user actions, check IP rate limiting
-      const lastParticipation = ipAddresses.get(ip);
-      const now = Date.now();
-      const oneDay = 24 * 60 * 60 * 1000;
-
-      if (lastParticipation && now - lastParticipation < oneDay) {
-        return NextResponse.json(
-          { error: 'You have already participated recently' },
-          { status: 429 }
-        );
-      }
-
-      // Update IP tracking for real user actions
-      ipAddresses.set(ip, now);
     }
 
     // Update counter

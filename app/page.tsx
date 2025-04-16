@@ -70,35 +70,15 @@ export default function LandingPage() {
   };
 
   const handleTakeSurvey = () => {
+    setShowSurveyPrompt(false);
     router.push('/surveys');
   };
 
-  const handleMaybeLater = async () => {
-    try {
-      // Increment the counter
-      const response = await fetch('/api/counter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          captchaToken: recaptchaRef.current?.getValue() || '',
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.error || 'Failed to increment counter');
-        return;
-      }
-
-      // Close the dialog and navigate
-      setShowSurveyPrompt(false);
-      router.push('/home');
-    } catch (error) {
-      console.error('Failed to increment counter:', error);
-      setError('Failed to connect to the server. Please try again.');
-    }
+  const handleMaybeLater = () => {
+    // No need to increment counter again
+    // It was already incremented when user clicked "Yes, I am"
+    setShowSurveyPrompt(false);
+    router.push('/home');
   };
 
   return (
@@ -158,7 +138,10 @@ export default function LandingPage() {
 
                 <Button
                   variant='outline'
-                  onClick={() => router.push('/home')}
+                  onClick={() => {
+                    setShowSurveyPrompt(false);
+                    router.push('/home');
+                  }}
                   className='border-pink-200 text-slate-700 hover:bg-pink-50 text-lg py-6 px-8 rounded-full shadow-lg hover:shadow-xl transition-all duration-300'
                 >
                   <span className='flex items-center gap-2'>

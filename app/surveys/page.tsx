@@ -120,6 +120,22 @@ export default function SurveyPage() {
       });
 
       if (response.ok) {
+        // Increment counter after successful survey submission
+        try {
+          await fetch('/api/counter', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              captchaToken: 'survey-submission',
+            }),
+          });
+        } catch (counterError) {
+          console.error('Error incrementing counter:', counterError);
+          // Continue with form submission even if counter increment fails
+        }
+
         setFormSubmitted(true);
       } else {
         throw new Error('Failed to submit survey');
