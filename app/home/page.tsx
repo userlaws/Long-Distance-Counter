@@ -6,14 +6,26 @@ import Pusher from 'pusher-js';
 
 export default function HomePage() {
   const [count, setCount] = useState(0);
-  const [hasAutoIncremented, setHasAutoIncremented] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Initial fetch of the counter value
-    fetch('/api/counter')
-      .then((res) => res.json())
-      .then((data) => setCount(data.count))
-      .catch((err) => console.error('Failed to fetch counter:', err));
+    const fetchCounter = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/counter');
+        const data = await res.json();
+        if (res.ok) {
+          setCount(data.count);
+        }
+      } catch (err) {
+        console.error('Failed to fetch counter:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCounter();
 
     // Set up Pusher for real-time updates
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
@@ -25,36 +37,19 @@ export default function HomePage() {
       setCount(data.count);
     });
 
-    // Auto-increment after 5 seconds - only for demo purposes
-    // const autoIncrementTimer = setTimeout(async () => {
-    //   if (!hasAutoIncremented) {
-    //     try {
-    //       const response = await fetch('/api/counter', {
-    //         method: 'POST',
-    //       });
-
-    //       const result = await response.json();
-    //       if (response.ok) {
-    //         setHasAutoIncremented(true);
-    //       } else {
-    //         console.error('Auto-increment failed:', result.error);
-    //       }
-    //     } catch (error) {
-    //       console.error('Failed to auto-increment counter:', error);
-    //     }
-    //   }
-    // }, 5000);
-
     return () => {
       channel.unbind_all();
       channel.unsubscribe();
       pusher.disconnect();
-      // clearTimeout(autoIncrementTimer);
     };
-  }, [hasAutoIncremented]);
+  }, []);
 
   // Function to render individual digits with animation
   const renderDigits = () => {
+    if (isLoading) {
+      return <span className='animate-pulse'>Loading...</span>;
+    }
+
     const digits = count.toString().split('');
     return digits.map((digit, index) => (
       <span

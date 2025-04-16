@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Pusher from 'pusher';
-import crypto from 'crypto';
-
-// In-memory storage for submissions (replace with a database in production)
-interface StorySurvey {
-  id: string;
-  question: string;
-  answer: string;
-  timestamp: string;
-  approved: boolean;
-}
+import {
+  addStory,
+  getApprovedStories,
+  hasSubmitted,
+  recordSubmission,
+} from '@/lib/db';
 
 // Define the question types
 type QuestionId =
@@ -19,17 +15,13 @@ type QuestionId =
   | 'connection'
   | 'advice';
 
-const stories: StorySurvey[] = [];
-
-// Track IPs to prevent multiple submissions
-const submissionIPs = new Set<string>();
-
-// Counter for demo purposes (in production, use a database)
-let counter = 0;
-
-function generateId(): string {
-  return crypto.randomBytes(16).toString('hex');
-}
+const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID!,
+  key: process.env.NEXT_PUBLIC_PUSHER_KEY!,
+  secret: process.env.PUSHER_SECRET!,
+  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+  useTLS: true,
+});
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,11 +31,11 @@ export async function POST(req: NextRequest) {
       req.headers.get('x-real-ip') ||
       'unknown';
 
-    // Check if this IP has already submitted a response recently
-    // Allow resubmission after 24 hours
-    if (submissionIPs.has(ipAddress)) {
+    // Check if this IP has already submitted a response
+    const alreadySubmitted = await hasSubmitted(ipAddress);
+    if (alreadySubmitted) {
       return NextResponse.json(
-        { error: 'You have already submitted a response recently' },
+        { error: 'You have already submitted a response' },
         { status: 429 }
       );
     }
@@ -63,30 +55,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Add IP to the set to prevent multiple submissions
-    submissionIPs.add(ipAddress);
-
-    // Set a timeout to remove the IP after 24 hours
-    setTimeout(() => {
-      submissionIPs.delete(ipAddress);
-    }, 24 * 60 * 60 * 1000);
-
-    // Increment counter
-    counter++;
-
-    // Initialize Pusher
-    const pusher = new Pusher({
-      appId: process.env.PUSHER_APP_ID!,
-      key: process.env.NEXT_PUBLIC_PUSHER_KEY!,
-      secret: process.env.PUSHER_SECRET!,
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-      useTLS: true,
-    });
-
-    // Trigger counter update event
-    await pusher.trigger('ldr-counter', 'counter-updated', {
-      count: counter,
-    });
+    // Record the submission to prevent duplicates
+    await recordSubmission(ipAddress);
 
     // Process the story submission if opted in
     if (data.shareStory && data.selectedQuestion) {
@@ -101,24 +71,21 @@ export async function POST(req: NextRequest) {
           'What advice would you give to others in long-distance relationships?',
       };
 
-      const storyData: StorySurvey = {
-        id: generateId(),
+      // Add story to database
+      await addStory({
         question: questionMap[questionId] || '',
         answer: data.answers[questionId],
         timestamp: new Date().toISOString(),
         approved: true, // Auto-approve for demo, would be false in production
-      };
+      });
 
-      // Add to stories collection
-      stories.push(storyData);
+      // Get approved stories and trigger real-time update
+      const approvedStories = await getApprovedStories();
 
       // Trigger an event to update story feed in real-time
-      if (stories.length <= 6) {
-        // Only trigger real-time updates for the first 6 stories
-        await pusher.trigger('ldr-stories', 'story-added', {
-          stories: stories.filter((s) => s.approved),
-        });
-      }
+      await pusher.trigger('ldr-stories', 'story-added', {
+        stories: approvedStories,
+      });
     }
 
     return NextResponse.json({ success: true });
@@ -133,7 +100,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   // Return approved stories for display on the stories page
-  const approvedStories = stories.filter((story) => story.approved);
+  const approvedStories = await getApprovedStories();
   return NextResponse.json({ stories: approvedStories });
 }
 
