@@ -6,7 +6,7 @@ import Pusher from 'pusher';
 let counter = 0;
 
 // Track IPs to prevent multiple submissions
-const submissionIPs = new Set<string>();
+const submissionIPs = new Map<string, number>();
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Add IP to tracker to prevent multiple submissions
-    submissionIPs.add(ipAddress);
+    submissionIPs.set(ipAddress, Date.now());
 
     // Set a timeout to remove the IP after 24 hours
     setTimeout(() => {
@@ -51,10 +51,10 @@ export async function POST(req: NextRequest) {
 
     // Initialize Pusher
     const pusher = new Pusher({
-      appId: process.env.PUSHER_APP_ID || '1975789',
-      key: process.env.NEXT_PUBLIC_PUSHER_KEY || 'a4b2e46fa5024db4e41a',
-      secret: process.env.PUSHER_SECRET || '11e90bd60cf6f9d9b068',
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'us2',
+      appId: process.env.PUSHER_APP_ID!,
+      key: process.env.NEXT_PUBLIC_PUSHER_KEY!,
+      secret: process.env.PUSHER_SECRET!,
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
       useTLS: true,
     });
 

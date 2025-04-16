@@ -94,10 +94,10 @@ export async function POST(req: NextRequest) {
 
       // Initialize Pusher
       const pusher = new Pusher({
-        appId: process.env.PUSHER_APP_ID || '1975789',
-        key: process.env.NEXT_PUBLIC_PUSHER_KEY || 'a4b2e46fa5024db4e41a',
-        secret: process.env.PUSHER_SECRET || '11e90bd60cf6f9d9b068',
-        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || 'us2',
+        appId: process.env.PUSHER_APP_ID!,
+        key: process.env.NEXT_PUBLIC_PUSHER_KEY!,
+        secret: process.env.PUSHER_SECRET!,
+        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
         useTLS: true,
       });
 
