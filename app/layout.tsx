@@ -7,7 +7,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://ldrcounter.com'),
+  metadataBase: new URL('https://ldr-counter.vercel.app/'),
   title: {
     default: 'Long Distance Relationship Counter | LDRCounter',
     template: '%s | LDRCounter',
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://ldrcounter.com',
+    url: 'https://ldr-counter.vercel.app/',
     title: 'Long Distance Relationship Counter | LDRCounter',
     description:
       'Join our community at LDRCounter and see the real-time number of people in long distance relationships. Share your story and connect with others who understand your journey.',
@@ -77,11 +77,6 @@ export const metadata: Metadata = {
       },
     ],
     shortcut: '/favicon.svg',
-  },
-  manifest: '/site.webmanifest',
-  verification: {
-    google: 'your-google-site-verification',
-    // Add other verification strings as needed
   },
 };
 
