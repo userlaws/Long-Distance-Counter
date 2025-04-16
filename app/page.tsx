@@ -89,6 +89,7 @@ export default function LandingPage() {
   };
 
   const handleMaybeLater = () => {
+    // No cookies needed - user can still take survey later if they want
     setShowSurveyPrompt(false);
     router.push('/home');
   };

@@ -3,12 +3,26 @@
 import { useEffect, useState } from 'react';
 import { Heart } from 'lucide-react';
 import Pusher from 'pusher-js';
+import { Button } from '@/components/ui/button';
 
 export default function HomePage() {
   const [count, setCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [canTakeSurvey, setCanTakeSurvey] = useState(true);
 
   useEffect(() => {
+    // Check cookie status to see if user has already submitted
+    const checkCookies = () => {
+      const hasSurveySubmitted = document.cookie
+        .split('; ')
+        .some((cookie) => cookie.startsWith('surveySubmitted=true'));
+
+      // Only show survey button if they haven't submitted
+      setCanTakeSurvey(!hasSurveySubmitted);
+    };
+
+    checkCookies();
+
     // Initial fetch of the counter value
     const fetchCounter = async () => {
       setIsLoading(true);
@@ -43,6 +57,11 @@ export default function HomePage() {
       pusher.disconnect();
     };
   }, []);
+
+  // Navigate to survey
+  const handleTakeSurvey = () => {
+    window.location.href = '/surveys';
+  };
 
   // Function to render individual digits with animation
   const renderDigits = () => {
@@ -91,6 +110,20 @@ export default function HomePage() {
           <p className='text-slate-700 mt-6'>
             This counter updates in real-time as people join our community.
           </p>
+
+          {canTakeSurvey && (
+            <div className='mt-8 pt-6 border-t border-pink-100'>
+              <p className='text-slate-700 mb-4'>
+                Share your long-distance relationship experience!
+              </p>
+              <Button
+                onClick={handleTakeSurvey}
+                className='bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'
+              >
+                Take the Survey
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

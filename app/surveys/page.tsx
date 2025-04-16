@@ -66,7 +66,7 @@ export default function SurveyPage() {
     },
   ];
 
-  // Add a useEffect to check for the surveySubmitted cookie
+  // Add a useEffect to check for the surveySubmitted cookie only
   useEffect(() => {
     // Check if the user has already submitted a survey
     const hasSurveySubmitted = document.cookie
@@ -74,9 +74,10 @@ export default function SurveyPage() {
       .some((cookie) => cookie.startsWith('surveySubmitted=true'));
 
     if (hasSurveySubmitted) {
-      // Redirect to stories page or home page
+      // Redirect to stories page if they already submitted
       router.push('/stories');
     }
+    // We allow users who declined to still take the survey if they change their mind
   }, [router]);
 
   const handleCaptchaChange = (value: string | null) => {
