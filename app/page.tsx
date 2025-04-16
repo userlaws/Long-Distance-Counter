@@ -73,9 +73,32 @@ export default function LandingPage() {
     router.push('/surveys');
   };
 
-  const handleMaybeLater = () => {
-    setShowSurveyPrompt(false);
-    router.push('/home');
+  const handleMaybeLater = async () => {
+    try {
+      // Increment the counter
+      const response = await fetch('/api/counter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          captchaToken: recaptchaRef.current?.getValue() || '',
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'Failed to increment counter');
+        return;
+      }
+
+      // Close the dialog and navigate
+      setShowSurveyPrompt(false);
+      router.push('/home');
+    } catch (error) {
+      console.error('Failed to increment counter:', error);
+      setError('Failed to connect to the server. Please try again.');
+    }
   };
 
   return (

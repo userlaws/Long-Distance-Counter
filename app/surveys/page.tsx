@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +16,8 @@ import { CheckCircle, AlertCircle, Heart, Stars } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion } from 'framer-motion';
+
+// Import reCAPTCHA
 import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function SurveyPage() {
@@ -26,8 +28,6 @@ export default function SurveyPage() {
   const [shareStory, setShareStory] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState('');
   const [formSubmitted, setFormSubmitted] = useState(false);
-  const [error, setError] = useState('');
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const [answers, setAnswers] = useState({
     meaning: '',
@@ -69,65 +69,20 @@ export default function SurveyPage() {
   const handleCaptchaChange = (value: string | null) => {
     if (value) {
       setCaptchaVerified(true);
-      setError('');
-    } else {
-      setCaptchaVerified(false);
     }
   };
 
-  const handleSubmit = async () => {
-    if (!captchaVerified) {
-      setError('Please verify that you are human first');
-      return;
-    }
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setAnswers((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-    setIsSubmitting(true);
-
-    try {
-      // First, submit the survey data
-      const surveyData = {
-        answers,
-        shareStory,
-        selectedQuestion: shareStory ? selectedQuestion : null,
-        captchaToken: recaptchaRef.current?.getValue() || '',
-      };
-
-      const surveyResponse = await fetch('/api/submit-survey', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(surveyData),
-      });
-
-      if (!surveyResponse.ok) {
-        throw new Error('Failed to submit survey');
-      }
-
-      // Then, increment the counter
-      const counterResponse = await fetch('/api/counter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          captchaToken: recaptchaRef.current?.getValue() || '',
-        }),
-      });
-
-      if (!counterResponse.ok) {
-        const data = await counterResponse.json();
-        setError(data.error || 'Failed to increment counter');
-        return;
-      }
-
-      setFormSubmitted(true);
-      router.push('/home');
-    } catch (error) {
-      console.error('Error:', error);
-      setError('Failed to submit. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+  const handleNext = () => {
+    if (currentStep < questions.length) {
+      setCurrentStep(currentStep + 1);
     }
   };
 
@@ -137,9 +92,43 @@ export default function SurveyPage() {
     }
   };
 
-  const handleNext = () => {
-    if (currentStep < questions.length - 1) {
-      setCurrentStep(currentStep + 1);
+  const handleSubmit = async () => {
+    if (!captchaVerified) {
+      alert('Please verify that you are human by completing the CAPTCHA');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Create data to send to API
+      const surveyData = {
+        answers,
+        shareStory,
+        selectedQuestion: shareStory ? selectedQuestion : null,
+        ip: '', // Will be captured server-side for verification
+        timestamp: new Date().toISOString(),
+      };
+
+      // Submit data to API
+      const response = await fetch('/api/submit-survey', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(surveyData),
+      });
+
+      if (response.ok) {
+        setFormSubmitted(true);
+      } else {
+        throw new Error('Failed to submit survey');
+      }
+    } catch (error) {
+      console.error('Error submitting survey:', error);
+      alert('There was an error submitting your response. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -219,12 +208,7 @@ export default function SurveyPage() {
                       value={
                         answers[currentQuestion.id as keyof typeof answers]
                       }
-                      onChange={(e) =>
-                        setAnswers({
-                          ...answers,
-                          [currentQuestion.id]: e.target.value,
-                        })
-                      }
+                      onChange={handleTextChange}
                       placeholder='Type your answer here...'
                       className='min-h-[150px] border-indigo-200 focus:border-purple-400 focus:ring-purple-400'
                     />
@@ -319,17 +303,17 @@ export default function SurveyPage() {
                           </Label>
                         </div>
                         <ReCAPTCHA
-                          ref={recaptchaRef}
                           sitekey={
-                            process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || ''
-                          }
+                            process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY ||
+                            '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
+                          } // Test key
                           onChange={handleCaptchaChange}
                         />
-                        {error && (
-                          <div className='text-red-500 mt-2'>
-                            <AlertCircle className='inline-block mr-2' />
-                            {error}
-                          </div>
+                        {!captchaVerified && (
+                          <p className='text-sm text-rose-500 mt-2 flex items-center'>
+                            <AlertCircle className='h-4 w-4 mr-1' />
+                            Please complete the CAPTCHA before submitting
+                          </p>
                         )}
                       </div>
                     </div>

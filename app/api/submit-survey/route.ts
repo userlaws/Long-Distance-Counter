@@ -24,6 +24,9 @@ const stories: StorySurvey[] = [];
 // Track IPs to prevent multiple submissions
 const submissionIPs = new Set<string>();
 
+// Counter for demo purposes (in production, use a database)
+let counter = 0;
+
 function generateId(): string {
   return crypto.randomBytes(16).toString('hex');
 }
@@ -66,7 +69,24 @@ export async function POST(req: NextRequest) {
     // Set a timeout to remove the IP after 24 hours
     setTimeout(() => {
       submissionIPs.delete(ipAddress);
-    }, 24 * 60 * 60 * 1000); // 24 hours
+    }, 24 * 60 * 60 * 1000);
+
+    // Increment counter
+    counter++;
+
+    // Initialize Pusher
+    const pusher = new Pusher({
+      appId: process.env.PUSHER_APP_ID!,
+      key: process.env.NEXT_PUBLIC_PUSHER_KEY!,
+      secret: process.env.PUSHER_SECRET!,
+      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+      useTLS: true,
+    });
+
+    // Trigger counter update event
+    await pusher.trigger('ldr-counter', 'counter-updated', {
+      count: counter,
+    });
 
     // Process the story submission if opted in
     if (data.shareStory && data.selectedQuestion) {
@@ -91,15 +111,6 @@ export async function POST(req: NextRequest) {
 
       // Add to stories collection
       stories.push(storyData);
-
-      // Initialize Pusher
-      const pusher = new Pusher({
-        appId: process.env.PUSHER_APP_ID!,
-        key: process.env.NEXT_PUBLIC_PUSHER_KEY!,
-        secret: process.env.PUSHER_SECRET!,
-        cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
-        useTLS: true,
-      });
 
       // Trigger an event to update story feed in real-time
       if (stories.length <= 6) {
