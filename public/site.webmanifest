@@ -1,0 +1,21 @@
+{
+  "name": "LDRCounter",
+  "short_name": "LDRCounter",
+  "description": "Join our community at LDRCounter and see the real-time number of people in long distance relationships.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#FF1B6B",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
