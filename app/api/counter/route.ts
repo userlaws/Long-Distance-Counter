@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server';
 import Pusher from 'pusher';
+import { getCounterValue, incrementCounter, initializeDb } from '@/lib/db';
+
+// Initialize the database when the module is loaded
+initializeDb().catch((error) => {
+  console.error('Failed to initialize database:', error);
+});
 
 const pusher = new Pusher({
   appId: process.env.PUSHER_APP_ID!,
@@ -9,14 +15,41 @@ const pusher = new Pusher({
   useTLS: true,
 });
 
-// In-memory counter (you might want to use a database in production)
-let counter = 0;
-
-// Store IP addresses to prevent spam
+// Store IP addresses to prevent spam (still using in-memory for rate limiting)
 const ipAddresses = new Map<string, number>();
 
+// PRODUCTION NOTE: In a production environment, you should:
+// 1. Use a database to store the counter (e.g., MongoDB, PostgreSQL)
+// 2. Use database transactions to safely increment the counter
+// 3. Consider using a caching layer (Redis) for better performance
+//
+// Example with a hypothetical database:
+//
+// async function getCounterValue() {
+//   // Connect to your database
+//   const db = await connectToDatabase();
+//   // Get the counter document/row
+//   const counterDoc = await db.collection('counters').findOne({ id: 'ldr-counter' });
+//   // Return the current count or default to 0
+//   return counterDoc ? counterDoc.count : 0;
+// }
+//
+// async function incrementCounter() {
+//   // Connect to your database
+//   const db = await connectToDatabase();
+//   // Increment the counter and return the new value
+//   const result = await db.collection('counters').findOneAndUpdate(
+//     { id: 'ldr-counter' },
+//     { $inc: { count: 1 } },
+//     { upsert: true, returnDocument: 'after' }
+//   );
+//   return result.count;
+// }
+
 export async function GET() {
-  return NextResponse.json({ count: counter });
+  // Get the current counter value from the database
+  const count = await getCounterValue();
+  return NextResponse.json({ count });
 }
 
 export async function POST(request: Request) {
@@ -148,15 +181,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // Update counter
-    counter += 1;
+    // Increment the counter in the database
+    const newCount = await incrementCounter();
 
-    // Trigger Pusher event
+    // Trigger Pusher event to update all clients
     await pusher.trigger('ldr-counter', 'counter-updated', {
-      count: counter,
+      count: newCount,
     });
 
-    return NextResponse.json({ count: counter });
+    return NextResponse.json({ count: newCount });
   } catch (error) {
     console.error('Error in counter API:', error);
     return NextResponse.json(

@@ -42,7 +42,14 @@ A real-time counter application for people in long-distance relationships, built
    npm install
    ```
 
-3. Create a `.env.local` file in the root directory with your environment variables:
+3. Set up a Neon PostgreSQL database:
+
+   - Go to [Neon](https://neon.tech) and create a free account
+   - Create a new project
+   - In the project dashboard, go to "Connection Details"
+   - Copy the connection string
+
+4. Create a `.env.local` file in the root directory with your environment variables:
 
    ```env
    NEXT_PUBLIC_PUSHER_APP_KEY=your_pusher_app_key
@@ -51,15 +58,16 @@ A real-time counter application for people in long-distance relationships, built
    PUSHER_SECRET=your_pusher_secret
    NEXT_PUBLIC_RECAPTCHA_SITE_KEY=your_recaptcha_site_key
    RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
+   NEON_DATABASE_URL=your_neon_connection_string
    ```
 
-4. Run the development server:
+5. Run the development server:
 
    ```bash
    npm run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
+6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Project Structure
 
