@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart, ArrowRight, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -20,7 +20,16 @@ export default function LandingPage() {
   const [showSurveyPrompt, setShowSurveyPrompt] = useState(false);
   const [error, setError] = useState('');
   const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [hasSurveySubmitted, setHasSurveySubmitted] = useState(false);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
+
+  useEffect(() => {
+    const surveySubmitted = document.cookie
+      .split('; ')
+      .some((cookie) => cookie.startsWith('surveySubmitted=true'));
+
+    setHasSurveySubmitted(surveySubmitted);
+  }, []);
 
   const handleCaptchaChange = (value: string | null) => {
     if (value) {
@@ -60,7 +69,12 @@ export default function LandingPage() {
       }
 
       await response.json();
-      setShowSurveyPrompt(true);
+
+      if (!hasSurveySubmitted) {
+        setShowSurveyPrompt(true);
+      } else {
+        router.push('/home');
+      }
     } catch (error) {
       console.error('Failed to increment counter:', error);
       setError('Failed to connect to the server. Please try again.');
@@ -75,8 +89,6 @@ export default function LandingPage() {
   };
 
   const handleMaybeLater = () => {
-    // No need to increment counter again
-    // It was already incremented when user clicked "Yes, I am"
     setShowSurveyPrompt(false);
     router.push('/home');
   };

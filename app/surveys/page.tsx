@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
@@ -65,6 +65,19 @@ export default function SurveyPage() {
       icon: '💌',
     },
   ];
+
+  // Add a useEffect to check for the surveySubmitted cookie
+  useEffect(() => {
+    // Check if the user has already submitted a survey
+    const hasSurveySubmitted = document.cookie
+      .split('; ')
+      .some((cookie) => cookie.startsWith('surveySubmitted=true'));
+
+    if (hasSurveySubmitted) {
+      // Redirect to stories page or home page
+      router.push('/stories');
+    }
+  }, [router]);
 
   const handleCaptchaChange = (value: string | null) => {
     if (value) {
@@ -135,6 +148,9 @@ export default function SurveyPage() {
           console.error('Error incrementing counter:', counterError);
           // Continue with form submission even if counter increment fails
         }
+
+        // Set a cookie to mark that this user has submitted a survey
+        document.cookie = 'surveySubmitted=true; path=/; max-age=31536000'; // 1 year expiry
 
         setFormSubmitted(true);
       } else {
