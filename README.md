@@ -32,8 +32,8 @@ A real-time counter application for people in long-distance relationships, built
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/userlaws/LDR.git
-   cd ldr-counter
+   git clone https://github.com/userlaws/Long-Distance-Counter.git
+   cd Long-Distance-Counter-counter
    ```
 
 2. Install dependencies:
